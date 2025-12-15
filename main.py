@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from aiogram import Bot, Dispatcher, F, Router, types
+from aiogram import Bot, Dispatcher, Router, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.types import BotCommand
@@ -10,7 +10,12 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 
 from bot_config import get_settings
-from db import add_expense, init_db, list_expenses, stats_by_period
+from db import init_db
+from finance_service import (
+    get_recent_expenses,
+    get_week_stats,
+    record_expense,
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -64,14 +69,14 @@ async def cmd_add(message: types.Message, command: CommandObject) -> None:
 
     amount, category = parsed
     user_id = message.from_user.id
-    await add_expense(user_id=user_id, amount=amount, category=category)
+    await record_expense(user_id=user_id, amount=amount, category=category)
     await message.answer(f"Добавил расход: {amount:.2f} ₽, категория: {category}")
 
 
 @router.message(Command("list"))
 async def cmd_list(message: types.Message) -> None:
     user_id = message.from_user.id
-    expenses = await list_expenses(user_id=user_id, limit=10)
+    expenses = await get_recent_expenses(user_id=user_id, limit=10)
     if not expenses:
         await message.answer("Пока нет записанных расходов.")
         return
@@ -88,7 +93,7 @@ async def cmd_list(message: types.Message) -> None:
 @router.message(Command("stats"))
 async def cmd_stats(message: types.Message) -> None:
     user_id = message.from_user.id
-    stats = await stats_by_period(user_id=user_id, days=7)
+    stats = await get_week_stats(user_id=user_id, days=7)
     if not stats:
         await message.answer("За последние 7 дней расходов ещё нет.")
         return
@@ -117,7 +122,7 @@ async def run_polling() -> None:
     if not settings.bot_token:
         raise RuntimeError("BOT_TOKEN не задан в переменных окружения.")
 
-    bot = Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+    bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
     dp.include_router(router)
 
@@ -134,7 +139,7 @@ async def run_webhook() -> None:
     if not settings.webhook_domain:
         raise RuntimeError("WEBHOOK_DOMAIN не задан для режима webhook.")
 
-    bot = Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+    bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
     dp.include_router(router)
 
