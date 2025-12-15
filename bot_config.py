@@ -17,12 +17,18 @@ class Settings:
 
 
 def get_settings() -> Settings:
+    raw_port = os.getenv("PORT", "") or "8000"
+    try:
+        port = int(raw_port)
+    except ValueError:
+        port = 8000
+
     return Settings(
         bot_token=os.getenv("BOT_TOKEN", ""),
         db_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./finbot.db"),
         webhook_domain=os.getenv("WEBHOOK_DOMAIN"),
         webhook_secret=os.getenv("WEBHOOK_SECRET"),
-        port=int(os.getenv("PORT", "8000")),
+        port=port,
     )
 
 
