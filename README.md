@@ -64,3 +64,19 @@ python main.py
 DEVELOPER_ID=1485539422
 SUBSCRIPTION_LINK=https://t.me/your_channel
 ```
+
+## Subscription and premium
+
+- `/subscribe` - sends Telegram invoice if `PAYMENT_PROVIDER_TOKEN` is set; otherwise shows a button from `SUBSCRIPTION_LINK`.
+- `/feedback <text>` - sends a message to the developer (`DEVELOPER_ID`, default 1485539422).
+- Premium commands (require active subscription): `/monthstats` (30-day stats), `/export` (CSV of recent expenses).
+
+Env vars example:
+```
+DEVELOPER_ID=1485539422
+PAYMENT_PROVIDER_TOKEN=your_provider_token
+SUBSCRIPTION_PRICE=299
+SUBSCRIPTION_CURRENCY=RUB
+SUBSCRIPTION_DAYS=30
+SUBSCRIPTION_LINK=https://t.me/your_channel
+```

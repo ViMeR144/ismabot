@@ -28,6 +28,16 @@ class Expense(Base):
     )
 
 
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    user_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 engine = create_async_engine(settings.db_url, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
@@ -72,3 +82,28 @@ async def stats_by_period(user_id: int, days: int = 7) -> dict[str, float]:
         return {category: float(total) for category, total in rows}
 
 
+async def get_subscription(user_id: int) -> Subscription | None:
+    async with AsyncSessionLocal() as session:
+        return await session.get(Subscription, user_id)
+
+
+async def set_subscription(user_id: int, expires_at: dt.datetime | None) -> Subscription:
+    async with AsyncSessionLocal() as session:
+        sub = await session.get(Subscription, user_id)
+        if sub:
+            sub.expires_at = expires_at
+        else:
+            sub = Subscription(user_id=user_id, expires_at=expires_at)
+            session.add(sub)
+        await session.commit()
+        await session.refresh(sub)
+        return sub
+
+
+async def has_active_subscription(user_id: int) -> bool:
+    now = dt.datetime.now(dt.timezone.utc)
+    async with AsyncSessionLocal() as session:
+        sub = await session.get(Subscription, user_id)
+        if not sub or not sub.expires_at:
+            return False
+        return sub.expires_at > now
