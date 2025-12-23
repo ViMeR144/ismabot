@@ -5,7 +5,7 @@ from typing import Optional
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
@@ -108,12 +108,50 @@ async def cmd_stats(message: types.Message) -> None:
     await message.answer(text)
 
 
+@router.message(Command("feedback"))
+async def cmd_feedback(message: types.Message, command: CommandObject) -> None:
+    feedback_text = (command.args or "").strip()
+    if not feedback_text:
+        await message.answer("Напишите текст после команды: /feedback ваш вопрос или предложение.")
+        return
+
+    developer_id = settings.developer_id
+    if not developer_id:
+        await message.answer("Получатель обратной связи не настроен. Свяжитесь с разработчиком напрямую.")
+        return
+
+    user = message.from_user
+    sender = f"{user.full_name or ''} (@{user.username}) id={user.id}"
+    body = (
+        "Новое сообщение обратной связи\n"
+        f"От: {sender}\n"
+        f"Текст:\n{feedback_text}"
+    )
+    await message.bot.send_message(chat_id=developer_id, text=body)
+    await message.answer("Сообщение отправлено разработчику. Спасибо за обратную связь!")
+
+
+@router.message(Command("subscribe"))
+async def cmd_subscribe(message: types.Message) -> None:
+    link = (settings.subscription_link or "").strip()
+    if not link:
+        await message.answer("Ссылка для подписки пока не настроена. Установите переменную SUBSCRIPTION_LINK.")
+        return
+
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="Перейти к подписке", url=link)]]
+    )
+    await message.answer("Оформить подписку можно по кнопке ниже:", reply_markup=kb)
+
+
 async def set_bot_commands(bot: Bot) -> None:
     commands = [
-        BotCommand(command="start", description="О боте и список команд"),
-        BotCommand(command="add", description="Добавить расход /add сумма категория"),
-        BotCommand(command="list", description="Показать последние расходы"),
-        BotCommand(command="stats", description="Статистика за 7 дней"),
+        BotCommand(command="start", description="Start and help"),
+        BotCommand(command="add", description="Add expense: /add amount category"),
+        BotCommand(command="list", description="Show recent expenses"),
+        BotCommand(command="stats", description="Weekly stats"),
+        BotCommand(command="feedback", description="Send feedback to developer"),
+        BotCommand(command="subscribe", description="Subscription link"),
     ]
     await bot.set_my_commands(commands)
 
@@ -175,5 +213,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-

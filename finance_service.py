@@ -37,3 +37,4 @@ async def get_week_stats(user_id: int, days: int = 7) -> dict[str, float]:
     return await stats_by_period(user_id=user_id, days=days)
 
 
+
